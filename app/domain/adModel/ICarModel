@@ -1,0 +1,7 @@
+import {ICarMake} from "./ICarMake";
+
+export interface ICarModel
+{
+    make: ICarMake;
+    name: string;
+}

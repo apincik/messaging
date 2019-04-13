@@ -1,0 +1,12 @@
+import {ICarModel} from "./ICarModel";
+import {ICategory} from "./ICategory";
+
+export interface ICar
+{
+    vin: string;
+    kilometres: string;
+    power: string;
+    registration_date: Date;
+    model: ICarModel;
+    category: ICategory;
+}

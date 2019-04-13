@@ -1,0 +1,134 @@
+<html>
+<head>
+    <title>Example messaging client</title>
+</head>
+<body>
+
+    <h1>Example messaging client</h1>
+    <p>Websocket connection...</p>
+    <p id="data"></p>
+
+    <button onclick="turnOnNotifications()">Turn on notifications.</button>
+
+
+    <script type = "text/javascript" src="socket-io.js"></script>
+
+    <script type="text/javascript">
+
+
+        // var randomWaitTime = Math.floor((Math.random() * 1000) + 1) * Math.floor((Math.random() * 10) + 1); // 1000 - 10000
+        // setTimeout(function(){ var socket = io("http://localhost:8021", {query: 'name=student1'}); }, randomWaitTime);
+
+        var socket = io("http://localhost:8021", {query: 'name=student1'});
+
+        var category = '/cars/bmw//'; // Sample category
+        var username = "student1"; // Update value by app
+        var token = null;
+        var secret = "st1secret"; // Update...
+
+        var listeningUserMessage = false;
+
+        var afterUserRegistered = function() {
+            // listen to category
+            window.bindNotificationCategory(category);
+            // listen to user messages
+            socket.emit('listen-userMessage');
+        };
+
+        socket.on('connect', function(){
+            //socket.emit('register', JSON.stringify({username: username, secret: secret}));
+            console.log('connected');
+        });
+
+        socket.on('renew', function(){
+            console.log('renewing token...');
+            // Wait before renewing...
+            setTimeout(function(){ socket.emit('register', JSON.stringify({username: username, secret: secret})); }, 3000);
+        });
+
+        socket.on('disconnect', function(){
+            console.log('disconnected');
+        });
+
+        socket.on('register', function() {
+            socket.emit('register', JSON.stringify({username: username, secret: secret}));
+
+        });
+
+        socket.on('registered', function(data) {
+            console.log('Registered.');
+            console.log(data);
+            token = data;
+            afterUserRegistered();
+        });
+
+        // User message listener
+        socket.on('listening-userMessage', function() {
+            listeningUserMessage = true;
+        });
+        socket.on('failed-listening-userMessage', function() {
+            // Try again to listen user messages...
+            setTimeout(function(){ socket.emit('listen-userMessage'); }, 10000);
+        });
+
+        socket.on('notification', function(data){
+            console.log('Notification received.');
+            console.log(data);
+
+            var notification = new Notification(data.title, {
+                //icon: 'http://cdn.sstatic.net/stackexchange/img/logos/so/so-icon.png',
+                icon: data.icon,
+                image: data.image,
+                body: data.body,
+            });
+
+            if(data.url != undefined) {
+                notification.onclick = function (event) {
+                    event.preventDefault(); // prevent the browser from focusing the Notification's tab
+                    window.open(data.url, '_blank');
+                };
+            }
+
+            setTimeout(notification.close.bind(notification), data.duration * 1000);
+
+
+        });
+
+        var categoryEventFunc = function(data){
+            console.log('Category ' + category + ' notification received.');
+            console.log(data);
+        };
+
+        socket.on('category', categoryEventFunc);
+
+        window.bindNotificationCategory = function(categoryName) {
+            socket.off('category');
+            category = categoryName;
+            socket.on('category', categoryEventFunc);
+            var parts = category.split('/');
+            socket.emit('listen-category', JSON.stringify({root: parts[0], category: parts[1], subCategory: parts[2]}));
+        };
+
+    </script>
+
+
+    <script type="text/javascript">
+
+        document.addEventListener('DOMContentLoaded', function () {
+            if (!Notification) {
+                alert('Desktop notifications not available in your browser. Try Chromium.');
+                return;
+            }
+
+        });
+
+        function turnOnNotifications()
+        {
+            if (Notification.permission !== "granted")
+                Notification.requestPermission();
+        }
+
+    </script>
+
+</body>
+</html>
